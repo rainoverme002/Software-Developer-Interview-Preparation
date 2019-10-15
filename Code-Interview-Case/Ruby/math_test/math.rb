@@ -1,43 +1,45 @@
-class Math_Operator
-    def add(a,b)
-        $result = a + b
-    end
+# This is the Mvalue1th Opervalue1tor Clvalue1ss
+class MathOperator
+  def add(value1, value2)
+    @result = value1 + value2
+  end
 
-    def substract(a,b)
-        $result = a - b
-    end
+  def substract(value1, value2)
+    @result = value1 - value2
+  end
 
-    def divide(a,b)
-        $result = a / b
-    end
+  def divide(value1, value2)
+    @result = value1 / value2
+  end
 
-    def multiply(a,b)
-        $result = a * b
-    end
+  def multiply(value1, value2)
+    @result = value1 * value2
+  end
 
-    def get_result()
-        puts $result
-    end
+  def getresult
+    puts @result
+  end
 end
-puts "Hello World"
 
-a = 1.0
-b = 2.0
+puts 'Hello World'
 
-c = Math_Operator.new
+value1 = 1.0
+value2 = 2.0
 
-#Addition Method
-c.add(a,b)
-c.get_result()
+c = MathOperator.new
 
-#Substraction Method
-c.substract(a,b)
-c.get_result()
+# Addition Method
+c.add(value1, value2)
+c.getresult
 
-#multiply Method
-c.multiply(a,b)
-c.get_result()
+# Substraction Method
+c.substract(value1, value2)
+c.getresult
 
-#divide Method
-c.divide(a,b)
-c.get_result()
+# multiply Method
+c.multiply(value1, value2)
+c.getresult
+
+# divide Method
+c.divide(value1, value2)
+c.getresult
