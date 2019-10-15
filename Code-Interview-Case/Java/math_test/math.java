@@ -1,26 +1,6 @@
-class math{
-    float result;
-    public void add(int a, int b){
-        result = a + b;
-    }
-
-    public void substract(int a, int b){
-        result = a - b;
-    }
-
-    public void multiply(int a, int b){
-        result = a * b;
-    }
-
-    public void divide(int a, int b){
-        result = a / b;
-    }
-
-    public float get_result(){
-        return result;
-    }
-}
-public class hello
+package math_test;
+/* File name : math.java */
+public class math
 {   
     public static void main(String[] args){
 
@@ -28,7 +8,7 @@ public class hello
         System.out.println("Hello World !");
 
         /* Initialize the object */
-        math coba = new math();
+        operator coba = new operator();
 
         /* Call the addition method*/
         coba.add(1,2);
