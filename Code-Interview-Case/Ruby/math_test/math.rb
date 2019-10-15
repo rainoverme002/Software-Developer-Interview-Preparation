@@ -1,4 +1,4 @@
-class Sample
+class Math_Operator
     def add(a,b)
         $result = a + b
     end
@@ -24,7 +24,7 @@ puts "Hello World"
 a = 1.0
 b = 2.0
 
-c = Sample.new
+c = Math_Operator.new
 
 #Addition Method
 c.add(a,b)
