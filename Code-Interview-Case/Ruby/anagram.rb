@@ -4,7 +4,7 @@ y=Array.new(x)
 print ("Array Sebelum :\n")
 puts x
 
-for i in 0..8
+for i in 0..8 
   y[i]=x[i].chars.sort.join
 end
 for i in 0..8
