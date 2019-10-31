@@ -1,10 +1,11 @@
-rev = 0
-print "Testing Pallindrome \n"
 
-puts "Please Insert the Number"
-x = gets
+# print "Testing Pallindrome \n"
+
+# puts "Please Insert the Number"
+x = 12321
 
 number = x
+rev = 0
 
 while(number!=0) do
     y = number%10
