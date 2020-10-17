@@ -1,0 +1,45 @@
+1. Build the rails "todos"apps
+#flag -T use to skip the Testing
+
+  $ rails new todos -T
+
+2. Git Tracking the apps
+
+  $ cd todos
+  $ git init
+  $ git add .
+  $ git commit -m 'Initial'
+
+3. Open Gemfile using the text editor
+
+  add
+
+    gem 'rspec-rails', '~> 3.0.1'
+
+  to 
+
+  group :development, :test do
+    #put it in here
+  end
+
+  add
+
+    gem 'capybara', '~> 2.3.0'
+
+  to 
+
+  group :test do
+    #put it in here
+  end
+
+4. bundle it
+
+$ sudo bundle
+
+5. install rspec
+
+$ rails g rspec:install
+
+
+
+

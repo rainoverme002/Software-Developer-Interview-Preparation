@@ -1,0 +1,84 @@
+A Look into Routing
+
+- PUT = replace the ENTIRE RESOURCE with the new representation provided (no mention of related resources in the spec from what i can see)
+
+- PATCH = replace parts of the source resource with the values provided AND|OR other parts of the resource are updated that you havent provided (timestamps) AND|OR updating the resource effects other resources (relationships)
+
+- 1st Situation, Plain vanilla route
+Rails.application.routes.draw do
+  resources :books do
+    member do
+      patch :publish
+      patch :unpublish
+    end
+
+    collection do
+      patch :publish_all
+      post :import
+    end
+  end
+end
+
+Explanation :
+"resources create all of the 8 HTTP method/routes CRUD operation for books"
+/books/:id
+
+"collection create method for all"
+/books/publish_all
+/books/import
+
+"member create publish routes for each member of the books"
+/books/:id/publish
+/books/:id/unpublish
+
+- 2nd Situation, change path
+Rails.application.routes.draw do
+  resources :books, path: "products" do
+    member do
+      patch :publish
+      patch :unpublish
+    end
+
+    collection do
+      patch :publish_all
+      post :import
+    end
+  end
+end
+
+Explanation:
+"Path will change books with value inside the path"
+/products/:id
+/products/publish_all
+/products/import
+/products/:id/publish
+/products/:id/unpublish
+
+- 3rd Situation, depend on users(admin, superadmin, user)
+Rails.application.routes.draw do
+  authenticated :admin do
+    resources :books, path: "products", module: "admin" do
+      member do
+        patch :publish
+        patch :unpublish
+      end
+
+      collection do
+        patch :publish_all
+        post :import
+      end
+    end
+  end
+
+  resources :books
+end
+
+Explanation:
+"the routes inside the authenticated is only for admin user"
+"It can divide not only for the routes but also the controllers into different contoller file"
+for admin:
+class Admin::BookController < ApplicationController
+
+for normal controller:
+class BookController < ApplicationController
+

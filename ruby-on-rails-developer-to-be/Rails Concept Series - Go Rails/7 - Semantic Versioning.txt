@@ -1,0 +1,17 @@
+Semantic Versioning
+
+MAJOR: version when you make incompatible API change
+MINOR: version when you add new functionalty in a backwards-compatible manner
+PATCH: version when you make backwards-compatible bug fixes 
+
+"2.1.0"
+MAJOR = 2
+MINOR = 1
+PATCH = 0
+
+- Equal to
+gem 'rails', '= 4.1.0'
+- Greater than
+gem 'rails', '>= 4.1.0'
+- Till greater than (just update PATCH version)
+gem 'rails', '~> 4.1.0'

@@ -1,0 +1,17 @@
+Environment Variables
+"Construct in you Operating System, so all the program in your system can use that""
+
+example:
+$PATH
+
+/Users/mekari53/.nvm/versions/node/v8.15.1/bin:/usr/local/opt/elasticsearch@5.6/bin:/usr/local/opt/mysql@5.7/bin:/Users/mekari53/.rbenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/mysql/bin
+
+"the collon (:) is separation for another path, so it can check another path"
+
+- To make ENV perminent in a session
+export PASSWORD=password
+- To make ENV perminent and the terminal will load it everytime it start we must add it to .bashrc or .zshrc
+nano .zshrc or vim .zshrc
+  and add
+export PASSWORD=password
+

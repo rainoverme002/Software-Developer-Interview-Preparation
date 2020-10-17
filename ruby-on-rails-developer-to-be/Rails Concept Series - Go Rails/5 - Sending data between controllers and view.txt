@@ -1,0 +1,15 @@
+Sending data between controllers and view
+"instance variable with @,eg: @test or @id is used because the normal variable is cannot stay outside the function itself, and the instance variable can stay in the class"
+
+example:
+
+class CoffeeMachine
+  def initialize
+    @water = 100
+  end
+  def make_coffee
+    @water -= 10
+  end
+end
+
+"the @water will be 100 if we create new CoffeMachine"

@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<!-- saved from url=(0061)https://www.justinweiss.com/articles/how-rails-sessions-work/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<title>How Rails sessions work - Justin Weiss</title>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<link href="https://www.justinweiss.com/favicon.ico" rel="shortcut icon">
+<meta name="author" content="Justin Weiss">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta property="og:title" content="How Rails sessions work">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.justinweiss.com/articles/how-rails-sessions-work/">
+<meta property="og:image" content="https://www.justinweiss.com/images/me-square.jpg">
+<meta property="og:site_name" content="Justin Weiss">
+
+
+  <link rel="author" href="https://plus.google.com/u/0/+JustinWeiss83/posts">
+
+  <link rel="stylesheet" href="./How Rails sessions work - Justin Weiss_files/stylesheet.css">
+  <link href="https://www.justinweiss.com/atom.xml" rel="alternate" title="Justin Weiss" type="application/atom+xml">
+  <link rel="alternate" title="Justin Weiss" type="application/json" href="https://www.justinweiss.com/feed.json">
+
+  <script async="" src="./How Rails sessions work - Justin Weiss_files/analytics.js"></script><script>
+   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+     (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+                            m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+   })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+   ga('create', 'UA-3643548-1', 'auto');
+   ga('send', 'pageview');
+  </script>
+
+  <script src="./How Rails sessions work - Justin Weiss_files/embed.js" data-timestamp="1572256264095"></script><script src="./How Rails sessions work - Justin Weiss_files/CKJS4.js" id="_ck_js_tag"></script><script type="text/javascript" src="./How Rails sessions work - Justin Weiss_files/jquery.min.js"></script><link rel="prefetch" as="style" href="https://c.disquscdn.com/next/embed/styles/lounge.953a2bd009935f47a8e815c3ee2bfc5a.css"><link rel="prefetch" as="script" href="https://c.disquscdn.com/next/embed/common.bundle.9ae27258a9490b17fbb3b9cdf530aff0.js"><link rel="prefetch" as="script" href="https://c.disquscdn.com/next/embed/lounge.bundle.0adc4cfceff8c3ab4259d467d6ea3419.js"><link rel="prefetch" as="script" href="https://disqus.com/next/config.js"><script src="./How Rails sessions work - Justin Weiss_files/alfalfalfa.0823c767a3bc925f628afd9bed26c958.js" async="" charset="UTF-8"></script></head>
+  <body style="">
+    <header>
+      <nav id="header-nav">
+        <ol><strong><a href="https://www.justinweiss.com/">Justin Weiss</a></strong></ol>
+        <a href="https://www.justinweiss.com/articles/how-rails-sessions-work/#" class="menu-toggle" id="toggle"><s class="bar"></s><s class="bar"></s></a>
+        <div class="menu" id="menu">
+          <ol><a href="https://www.justinweiss.com/practicing-rails-course/">Free Rails Course</a></ol>
+          <ol><a href="https://www.justinweiss.com/articles/archives/">All Articles</a></ol>
+          <ol><a href="https://www.justinweiss.com/advice/">Advice</a></ol>
+          <ol><a href="https://www.justinweiss.com/practicing-rails/">Practicing Rails Book</a></ol>
+          <ol><a href="https://www.justinweiss.com/elsewhere/">Around the Internet</a></ol>
+        </div>
+      </nav>
+    </header>
+    <div class="content">
+      
+      
+      <main aria-label="Content" class="">
+        
+          <h1 class="article-title">How Rails Sessions Work</h1>
+        
+        
+          
+<article>
+  <p>What if your Rails app couldn’t tell who was visiting it? If you had no idea that the same person requested two different pages? If all the data you stored vanished as soon as you returned a response?</p>
+
+<p>That might be fine for a mostly static site. <strong>But most apps need to be able to store <em>some</em> data about a user.</strong> Maybe it’s a user id, or a preferred language, or whether they always want to see the desktop version of your site on their iPad.</p>
+
+<p><code>session</code> is the perfect place to put this kind of data. Little bits of data you want to keep around for more than one request.</p>
+
+<p>Sessions are easy to use:</p>
+
+<figure class="code"><pre class="highlight"><code class="language-ruby"><span class="n">session</span><span class="o">[</span><span class="ss">:current_user_id</span><span class="o">]</span> <span class="o">=</span> <span class="vi">@user</span><span class="o">.</span><span class="n">id</span></code>
+</pre></figure>
+
+<p>But they can be a little magical. What is a session? How does Rails know to show the right data to the right person? And how do you decide where you keep your session data?</p>
+
+<h2 id="what-is-a-session">What is a session?</h2>
+
+<p><strong>A session is just a place to store data during one request that you can read during later requests.</strong></p>
+
+<p>You can set some data in a controller action:</p>
+
+<figure class="code"><figcaption><span>app/controllers/sessions_controller.rb</span></figcaption><pre class="highlight"><code class="language-ruby"><span class="k">def</span> <span class="nf">create</span>
+  <span class="c1"># ...</span>
+  <span class="n">session</span><span class="o">[</span><span class="ss">:current_user_id</span><span class="o">]</span> <span class="o">=</span> <span class="vi">@user</span><span class="o">.</span><span class="n">id</span>
+  <span class="c1"># ...</span>
+<span class="k">end</span></code>
+</pre></figure>
+
+<p>And read it in another:</p>
+
+<figure class="code"><figcaption><span>app/controllers/users_controller.rb</span></figcaption><pre class="highlight"><code class="language-ruby"><span class="k">def</span> <span class="nf">index</span>
+  <span class="n">current_user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id</span><span class="p">(</span><span class="n">session</span><span class="o">[</span><span class="ss">:current_user_id</span><span class="o">]</span><span class="p">)</span>
+  <span class="c1"># ...</span>
+<span class="k">end</span></code>
+</pre></figure>
+
+<p>It might not <em>seem</em> that interesting. But it takes coordination between your user’s browser and your Rails app to make everything connect up. And it all starts with <a href="http://en.wikipedia.org/wiki/Browser_cookies">cookies</a>.</p>
+
+<p>When you request a webpage, the server can set a cookie when it responds back:</p>
+
+<figure class="code"><pre class="highlight"><code class="language-text">~ jweiss$ curl -I <a class="vglnk" href="http://www.google.com/" rel="nofollow"><span>http</span><span>://</span><span>www</span><span>.</span><span>google</span><span>.</span><span>com</span></a> | grep Set-Cookie
+
+Set-Cookie: NID=67=J2xeyegolV0SSneukSOANOCoeuDQs7G1FDAK2j-nVyaoejz-4K6aouUQtyp5B_rK3Z7G-EwTIzDm7XQ3_ZUVNnFmlGfIHMAnZQNd4kM89VLzCsM0fZnr_N8-idASAfBEdS; expires=Wed, 16-Sep-2015 05:44:42 GMT; path=/; domain=.google.com; HttpOnly</code>
+</pre></figure>
+
+<p>Your browser will store those cookies. <strong>And until the cookie expires, every time you make a request, your browser will send the cookies back to the server:</strong></p>
+
+<figure class="code"><pre class="highlight"><code class="language-text">...
+&gt; GET / HTTP/1.1
+&gt; User-Agent: curl/7.37.1
+&gt; Host: <a class="vglnk" href="http://www.google.com/" rel="nofollow"><span>www</span><span>.</span><span>google</span><span>.</span><span>com</span></a>
+&gt; Accept: */*
+&gt; Cookie: NID=67=J2xeyegolV0SSneukSOANOCoeuDQs7G1FDAK2j-nVyaoejz-4K6aouUQtyp5B_rK3Z7G-EwTIzDm7XQ3_ZUVNnFmlGfIHMAnZQNd4kM89VLzCsM0fZnr_N8-idASAfBEdS; expires=Wed, 16-Sep-2015 05:44:42 GMT; path=/; domain=.google.com; HttpOnly
+...</code>
+</pre></figure>
+
+<p>Many cookies just look like gibberish. And they’re supposed to. Because the information inside the cookie isn’t meant for the user. <strong>Your Rails app is in charge of figuring out what a cookie means.</strong> Your app set it, so your app can read it.</p>
+
+<h2 id="what-does-this-have-to-do-with-a-session">What does this have to do with a session?</h2>
+
+<p>So, you have a cookie. You put data in during one request, and you get that same data in the next. What’s the difference between that and a session?</p>
+
+<p><strong>By default, in Rails, there isn’t much of a difference.</strong> Rails <a href="http://guides.rubyonrails.org/security.html#session-storage">does some work with the cookie to make it more secure</a>. But besides that, it works the way you’d expect. Your Rails app puts some data into the cookie, the same data comes out of the cookie. If this was all there was, there’d be no reason to distinguish sessions from cookies.</p>
+
+<p>But cookies aren’t always the right answer for session data:</p>
+
+<ul>
+  <li>
+    <p><strong>You can only store about 4kb of data in a cookie.</strong></p>
+
+    <p>This is <em>usually</em> enough, but sometimes it’s not.</p>
+  </li>
+  <li>
+    <p><strong>Cookies are sent along with every request you make.</strong></p>
+
+    <p>Big cookies mean bigger requests and responses, which mean slower websites.</p>
+  </li>
+  <li>
+    <p><strong>If you accidentally expose your <code>secret_key_base</code>, your users can change the data you’ve put inside your cookie.</strong></p>
+
+    <p>When this includes things like <code>current_user_id</code>, anyone can become whichever user they want!</p>
+  </li>
+  <li>
+    <p><strong>Storing the wrong kind of data inside a cookie <a href="http://guides.rubyonrails.org/security.html#replay-attacks-for-cookiestore-sessions">can be insecure</a>.</strong></p>
+  </li>
+</ul>
+
+<p>If you’re careful, these aren’t big problems.</p>
+
+<p>But when you can’t store your session data inside a cookie for one of these reasons, Rails has <a href="http://guides.rubyonrails.org/action_controller_overview.html#session">a few other places to keep your sessions</a>:</p>
+
+<h2 id="alternative-session-stores">Alternative session stores</h2>
+
+<p><strong>All of the session stores that <em>aren’t</em> the cookie session store work in pretty much the same way.</strong> But it’s easiest to think about using a real example.</p>
+
+<p>If you were <a href="https://github.com/rails/activerecord-session_store">keeping track of your sessions with ActiveRecord</a>:</p>
+
+<ol>
+  <li>
+    <p>When you call <code>session[:current_user_id] = 1</code> in your app, and a session doesn’t already exist:</p>
+  </li>
+  <li>
+    <p>Rails will create a new record in your <code>sessions</code> table with a random session ID (say, <code>09497d46978bf6f32265fefb5cc52264</code>).</p>
+  </li>
+  <li>
+    <p>It’ll store <code>{current_user_id: 1}</code> (<a href="https://en.wikipedia.org/wiki/Base64">Base64</a>-encoded) in the <code>data</code> attribute of that record.</p>
+  </li>
+  <li>
+    <p>And it’ll return the generated session ID, <code>09497d46978bf6f32265fefb5cc52264</code>, to the browser using <code>Set-Cookie</code>.</p>
+  </li>
+</ol>
+
+<p>The next time you request a page,</p>
+
+<ol>
+  <li>
+    <p>The browser sends that same cookie to your app, using the <code>Cookie:</code> header.</p>
+
+    <p>(like this: <code>Cookie: _my_app_session=09497d46978bf6f32265fefb5cc52264;</code><br>
+<code>path=/; HttpOnly</code>)</p>
+  </li>
+  <li>
+    <p>When you call <code>session[:current_user_id]</code>:</p>
+  </li>
+  <li>
+    <p>Your app grabs the session ID out of your cookie, and finds its record in the <code>sessions</code> table.</p>
+  </li>
+  <li>
+    <p>Then, it returns <code>current_user_id</code> out of the <code>data</code> attribute of that record.</p>
+  </li>
+</ol>
+
+<p>Whether you’re storing sessions in the database, in <a href="http://www.memcached.org/">Memcached</a>, in <a href="http://redis.io/">Redis</a>, or wherever else, they mostly follow this same process. <strong>Your cookie <em>only</em> contains a session ID, and your Rails app looks up the data in your session store using that ID.</strong></p>
+
+<h2 id="cookie-store-cache-store-or-database-store">Cookie store, cache store, or database store?</h2>
+
+<p><strong>When it works, storing your sessions in cookies is by far the easiest way to go.</strong> It doesn’t need any extra infrastructure or setup.</p>
+
+<p>But if you need to move beyond the cookie session store, you have two options:</p>
+
+<p>Store sessions in a database, or store them in your cache.</p>
+
+<h3 id="storing-sessions-in-the-cache">Storing sessions in the cache</h3>
+
+<p>You might already be using something like Memcache to cache your partials or data. <strong>If so, the cache store is the second-easiest place to store session data, since it’s already set up.</strong></p>
+
+<p>You don’t have to worry about your session store growing out of control, because older sessions will automatically get kicked out of the cache if it gets too big. And it’s fast, because your cache will most likely be kept in memory.</p>
+
+<p><strong>But it’s not perfect:</strong></p>
+
+<ul>
+  <li>
+    <p>If you actually care about keeping old sessions around, you probably don’t <em>want</em> them to get kicked out of the cache.</p>
+  </li>
+  <li>
+    <p>Your sessions and your cached data will be fighting for space. If you don’t have enough memory, you could be facing a ton of cache misses and early expired sessions.</p>
+  </li>
+  <li>
+    <p>If you ever need to reset your cache (say you upgraded Rails and your old cached data is no longer accurate), there’s no way to do that without expiring <em>everyone’s</em> sessions.</p>
+  </li>
+</ul>
+
+<p>Still, this is how we store session data at Avvo, and it’s worked well for us so far.</p>
+
+<h3 id="storing-sessions-in-the-database">Storing sessions in the database</h3>
+
+<p><strong>If you want to keep your session data around until it legitimately expires, you probably want to keep it in some kind of database.</strong> Whether that’s Redis, ActiveRecord, or something else.</p>
+
+<p>But database session storage also has drawbacks:</p>
+
+<ul>
+  <li>
+    <p><strong>With some database stores, your sessions won’t get cleaned up automatically.</strong></p>
+
+    <p>So you’ll have to go through and clean expired sessions on your own.</p>
+  </li>
+  <li>
+    <p><strong>You have to know how your database will behave when it’s full of session data.</strong></p>
+
+    <p>Are you using Redis as your session store? Will it try to keep all your session data in memory? Does your server have enough memory for that, or will it start swapping so badly you won’t be able to <code>ssh</code> in to fix it?</p>
+  </li>
+  <li>
+    <p><strong>You have to be more careful about when you create session data, or you’ll fill your database with useless sessions.</strong></p>
+
+    <p>For example, if you accidentally touch the session on every request, googlebot could create hundreds of thousands of useless sessions. And that would be a bad time.</p>
+  </li>
+</ul>
+
+<p>Most of these problems are pretty rare. But you should still be aware of them.</p>
+
+<h2 id="so-how-should-you-store-your-sessions">So how should you store your sessions?</h2>
+
+<p>If you’re pretty sure you won’t run into any of the cookie store’s limitations, use it. It doesn’t need much setup, and isn’t a headache to maintain.</p>
+
+<p>Storing sessions in the cache vs. the database is more a judgement call about how bad it would be to expire a session early. I treat session data as pretty temporary, so the cache store works well for me. <strong>So I usually try cookie first, then cache, then database.</strong></p>
+
+<p>But how about you? How do you store <em>your</em> sessions? Leave a comment and let me know!</p>
+
+<p>And if you want to learn more about how Ruby and Rails internals work, take a look at this article: <a href="https://www.justinweiss.com/articles/how-do-gems-work/">How do Gems work</a>? Or, if you’re more interested in how the web works, check out <a href="https://www.justinweiss.com/articles/a-web-server-vs-an-app-server/">A Web Server vs. an App Server</a>.</p>
+
+</article>
+
+<div><div class="ck_form_container ck_inline" data-ck-version="7">
+  
+<div class="ck_form ck_vertical_subscription_form ck_horizontal">
+  <div class="ck_form_content">
+    <h3 class="ck_form_title">Pushing through tutorials, and still not learning anything?</h3>
+    <div class="ck_description">
+      <span class="ck_image">
+        
+      </span>
+      <p>Have you slogged through the same guide three times and <em>still</em> don't know how to build a real app?</p><p><strong>In this free 7-day Rails course,</strong> you'll learn specific steps to start your own Rails apps — without giving up, and without being overwhelmed.</p><p>You'll also discover the fastest way to learn new Rails features with your 32-page sample of <em>Practicing Rails: Learn Rails Without Being Overwhelmed</em>. <br></p><p>Sign up below to get started:</p>
+    </div>
+  </div>
+
+  <div class="ck_form_fields">
+    <div id="ck_success_msg" style="display:none;">
+      <p>Thanks! You should get an email from me in a few minutes with your free sample chapter.
+
+While you wait, I'd love to &lt;a href="<a class="vglnk" href="https://twitter.com/justinweiss" rel="nofollow"><span>https</span><span>://</span><span>twitter</span><span>.</span><span>com</span><span>/</span><span>justinweiss</span></a>"&gt;meet you on Twitter&lt;/a&gt;. You can learn a little bit more about Ruby each day -- I share the best Ruby and Rails articles I read. And it's great for short conversations and answering questions about software development.</p>
+    </div>
+
+    <!--  Form starts here  -->
+    <form id="ck_subscribe_form" class="ck_subscribe_form" action="https://forms.convertkit.com/landing_pages/1094/subscribe" data-remote="true">
+      <input type="hidden" value="{&quot;embed_style&quot;:&quot;inline&quot;,&quot;embed_trigger&quot;:&quot;scroll_percentage&quot;,&quot;scroll_percentage&quot;:&quot;70&quot;,&quot;delay_seconds&quot;:&quot;10&quot;,&quot;display_position&quot;:&quot;br&quot;,&quot;display_devices&quot;:&quot;all&quot;,&quot;days_no_show&quot;:&quot;15&quot;,&quot;converted_behavior&quot;:&quot;show&quot;,&quot;form_style&quot;:&quot;full&quot;}" id="ck_form_options">
+      <input type="hidden" name="id" value="1094" id="landing_page_id">
+      <input type="hidden" name="ck_form_recaptcha" value="" id="ck_form_recaptcha">
+      <div class="ck_errorArea">
+        <div id="ck_error_msg" style="display:none">
+          <p>There was an error submitting your subscription. Please try again.</p>
+        </div>
+      </div>
+      <div class="ck_control_group ck_first_name_field_group">
+        <label class="ck_label" for="ck_firstNameField">First Name</label>
+        <input type="text" name="first_name" class="ck_first_name" id="ck_firstNameField">
+      </div>
+      <div class="ck_control_group ck_email_field_group">
+        <label class="ck_label" for="ck_emailField">Email Address</label>
+        <input type="email" name="email" class="ck_email_address" id="ck_emailField" required="">
+      </div>
+      <div class="ck_control_group ck_captcha2_h_field_group ck-captcha2-h" style="position: absolute !important;left: -999em !important;">
+        <label class="ck_label" for="ck_captcha2_h">We use this field to detect spam bots. If you fill this in, you will be marked as a spammer.</label>
+        <input type="text" name="captcha2_h" class="ck-captcha2-h" id="ck_captcha2_h">
+      </div>
+
+
+      <button class="subscribe_button ck_subscribe_button btn fields" id="ck_subscribe_button">
+        Send me lesson #1
+      </button>
+      <span class="ck_guarantee">
+        
+          <a class="ck_powered_by" href="https://convertkit.com/?utm_source=dynamic&amp;utm_medium=referral&amp;utm_campaign=poweredby&amp;utm_content=form">Powered by ConvertKit</a>
+      </span>
+    <input type="hidden" name="ck_field_32793_last_optin_url" value="https://www.justinweiss.com/articles/how-rails-sessions-work/"></form>
+  </div>
+
+</div>
+
+</div>
+
+
+<style type="text/css">/* Layout */
+  .ck_form {
+  /* divider image */
+	background: #fff url(data:image/gif;base64,R0lGODlhAQADAIABAMzMzP///yH/C1hNUCBEYXRhWE1QPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS41LWMwMTQgNzkuMTUxNDgxLCAyMDEzLzAzLzEzLTEyOjA5OjE1ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVmIyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgKE1hY2ludG9zaCkiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MUQ5NjM5RjgxQUVEMTFFNEJBQTdGNTQwMjc5MTZDOTciIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MUQ5NjM5RjkxQUVEMTFFNEJBQTdGNTQwMjc5MTZDOTciPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDoxRDk2MzlGNjFBRUQxMUU0QkFBN0Y1NDAyNzkxNkM5NyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDoxRDk2MzlGNzFBRUQxMUU0QkFBN0Y1NDAyNzkxNkM5NyIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH//v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0s7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAEAAAEALAAAAAABAAMAAAICRFIAOw==) repeat-y center top;
+	font-family: "Helvetica Neue", Helvetica, Arial, Verdana, sans-serif;
+	line-height: 1.5em;
+	overflow: hidden;
+	color: #666;
+	font-size: 16px;
+	border-top: solid 20px #3071b0;
+  border-top-color: #ff753b;
+	border-bottom: solid 10px #3d3d3d;
+  border-bottom-color: #994623;
+	-webkit-box-shadow: 0px 0px 5px rgba(0,0,0,.3);
+	-moz-box-shadow: 0px 0px 5px rgba(0,0,0,.3);
+	box-shadow: 0px 0px 5px rgba(0,0,0,.3);
+	clear: both;
+	margin: 20px 0px;
+}
+
+.ck_form, .ck_form * {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+#ck_subscribe_form {
+  clear: both;
+}
+
+/* Element Queries — uses JS */
+
+.ck_form_content, .ck_form_fields {
+	width: 50%;
+	float: left;
+	padding: 5%;
+}
+
+.ck_form.ck_horizontal {
+}
+
+.ck_form_content {
+	border-bottom: none;
+}
+
+.ck_form.ck_vertical {
+	background: #fff;
+}
+
+.ck_vertical .ck_form_content, .ck_vertical .ck_form_fields {
+	padding: 10%;
+	width: 100%;
+	float: none;
+}
+
+.ck_vertical .ck_form_content {
+	border-bottom: 1px dotted #aaa;
+	overflow: hidden;
+}
+
+/* Trigger the vertical layout with media queries as well */
+
+@media all and (max-width: 499px) {
+
+	.ck_form {
+		background: #fff;
+	}
+
+	.ck_form_content, .ck_form_fields {
+		padding: 10%;
+		width: 100%;
+		float: none;
+	}
+
+	.ck_form_content {
+		border-bottom: 1px dotted #aaa;
+	}
+
+}
+
+/* Content */
+
+.ck_form_content h3 {
+	margin: 0px 0px 15px;
+	font-size: 24px;
+	padding: 0px;
+}
+
+
+.ck_form_content p {
+	font-size: 14px;
+}
+
+.ck_image {
+	float: left;
+	margin-right: 5px;
+}
+
+/* Form fields */
+
+.ck_errorArea {
+	display: none;
+}
+
+#ck_success_msg {
+	padding: 10px 10px 0px;
+	border: solid 1px #ddd;
+	background: #eee;
+}
+
+.ck_label {
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.ck_form input[type="text"], .ck_form input[type="email"] {
+	font-size: 14px;
+	padding: 10px 8px;
+	width: 100%;
+	border: 1px solid #d6d6d6; /* stroke */
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border-radius: 4px; /* border radius */
+	background-color: #f8f7f7; /* layer fill content */
+	margin-bottom: 5px;
+	height: auto;
+}
+
+.ck_form input[type="text"]:focus, .ck_form input[type="email"]:focus {
+	outline: none;
+	border-color: #aaa;
+}
+
+.ck_checkbox {
+  padding: 10px 0px 10px 20px;
+  display: block;
+  clear: both;
+}
+
+.ck_checkbox input.optIn {
+  margin-left: -20px;
+  margin-top: 0;
+}
+.ck_form .ck_opt_in_prompt {
+  margin-left: 4px;
+}
+.ck_form .ck_opt_in_prompt p {
+  display: inline;
+}
+
+.ck_form .ck_subscribe_button {
+    width: 100%;
+    color: #fff;
+    margin: 10px 0px 0px;
+    padding:  10px 0px;
+    font-size: 18px;
+    background: #ff753b;
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    border-radius: 4px; /* border radius */
+    cursor: pointer;
+    border: none;
+    text-shadow: none;
+  }
+
+
+.ck_form .ck_guarantee {
+	color: #626262;
+	font-size: 12px;
+	text-align: center;
+	padding: 5px 0px;
+	display: block;
+}
+
+.ck_form .ck_powered_by {
+	display: block;
+	color: #aaa;
+}
+
+.ck_form .ck_powered_by:hover {
+	display: block;
+	color: #444;
+}
+
+.ck_converted_content {
+  display: none;
+	padding: 5%;
+	background: #fff;
+}
+
+
+/* v6 */
+
+.ck_form_v6 #ck_success_msg {
+	padding: 0px 10px;
+}
+
+@media all and (max-width: 403px) {
+  .ck_form_v6.ck_modal .ck_close_link {
+    top: 30px;
+  }
+}
+
+@media all and (min-width: 404px) and (max-width: 499px) {
+  .ck_form_v6.ck_modal .ck_close_link {
+    top: 57px;
+  }
+}
+
+
+
+.ck_inline .ck_form{
+  border: 2px dashed #999999;
+  background: none;
+  box-shadow: none;
+}
+
+.ck_inline .ck_form_content{
+  float: none !important;
+  width: 100% !important;
+  padding: 5% 5% 0% 5%;
+}
+
+.ck_inline .ck_form_fields{
+  float: none !important;
+  width: 100% !important;
+  padding: 0% 5% 5% 5%;
+}
+
+.ck_inline .ck_subscribe_button { box-shadow: #a34b26 0 4px; }
+
+.ck_inline .ck_powered_by { display: none !important; }
+
+</style>
+</div><script async="" src="./How Rails sessions work - Justin Weiss_files/1094" id="_ck_1094"></script>
+
+
+
+<h4>Did you like this article? You should read these:</h4>
+<ul>
+  
+  <li><a href="https://www.justinweiss.com/articles/a-web-server-vs-an-app-server/">A Web Server vs. an App Server</a></li>
+  
+  <li><a href="https://www.justinweiss.com/articles/how-much-testing-is-too-much/">How Much Testing Is Too Much?</a></li>
+  
+  <li><a href="https://www.justinweiss.com/articles/better-globals-with-a-tiny-activesupport-module/">Better Globals With a Tiny ActiveSupport Module</a></li>
+  
+  <li><a href="https://www.justinweiss.com/articles/where-do-you-put-your-code/">Where Does Your Code Go?</a></li>
+  
+  <li><a href="https://www.justinweiss.com/articles/a-guide-to-extracting-your-first-ruby-gem/">A Guide to Extracting Your First Ruby Gem</a></li>
+  
+</ul>
+
+
+<div>
+
+<style>
+
+    .ck_slide_up.ck_form_v6 {
+      right: 0;
+    }
+    .ck_slide_up.ck_form_v6 .ck_close_link {
+      right: 30px;
+    }
+    @media all and (min-width: 600px) {
+      .ck_slide_up.ck_form_v6 {
+        padding-right: 25px;
+      }
+    }
+    @media all and (min-width: 600px) and (max-width: 800px) {
+      .ck_slide_up--lg.ck_form_v6 {
+        padding-right: 0;
+      }
+    }
+
+</style>
+
+
+<style type="text/css">/* Layout */
+  .ck_form {
+  /* divider image */
+	background: #fff url(data:image/gif;base64,R0lGODlhAQADAIABAMzMzP///yH/C1hNUCBEYXRhWE1QPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS41LWMwMTQgNzkuMTUxNDgxLCAyMDEzLzAzLzEzLTEyOjA5OjE1ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVmIyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgKE1hY2ludG9zaCkiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MUQ5NjM5RjgxQUVEMTFFNEJBQTdGNTQwMjc5MTZDOTciIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MUQ5NjM5RjkxQUVEMTFFNEJBQTdGNTQwMjc5MTZDOTciPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDoxRDk2MzlGNjFBRUQxMUU0QkFBN0Y1NDAyNzkxNkM5NyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDoxRDk2MzlGNzFBRUQxMUU0QkFBN0Y1NDAyNzkxNkM5NyIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH//v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0s7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAEAAAEALAAAAAABAAMAAAICRFIAOw==) repeat-y center top;
+	font-family: "Helvetica Neue", Helvetica, Arial, Verdana, sans-serif;
+	line-height: 1.5em;
+	overflow: hidden;
+	color: #666;
+	font-size: 16px;
+	border-top: solid 20px #3071b0;
+  border-top-color: #ff753b;
+	border-bottom: solid 10px #3d3d3d;
+  border-bottom-color: #994623;
+	-webkit-box-shadow: 0px 0px 5px rgba(0,0,0,.3);
+	-moz-box-shadow: 0px 0px 5px rgba(0,0,0,.3);
+	box-shadow: 0px 0px 5px rgba(0,0,0,.3);
+	clear: both;
+	margin: 20px 0px;
+}
+
+.ck_form, .ck_form * {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+#ck_subscribe_form {
+  clear: both;
+}
+
+/* Element Queries — uses JS */
+
+.ck_form_content, .ck_form_fields {
+	width: 50%;
+	float: left;
+	padding: 5%;
+}
+
+.ck_form.ck_horizontal {
+}
+
+.ck_form_content {
+	border-bottom: none;
+}
+
+.ck_form.ck_vertical {
+	background: #fff;
+}
+
+.ck_vertical .ck_form_content, .ck_vertical .ck_form_fields {
+	padding: 10%;
+	width: 100%;
+	float: none;
+}
+
+.ck_vertical .ck_form_content {
+	border-bottom: 1px dotted #aaa;
+	overflow: hidden;
+}
+
+/* Trigger the vertical layout with media queries as well */
+
+@media all and (max-width: 499px) {
+
+	.ck_form {
+		background: #fff;
+	}
+
+	.ck_form_content, .ck_form_fields {
+		padding: 10%;
+		width: 100%;
+		float: none;
+	}
+
+	.ck_form_content {
+		border-bottom: 1px dotted #aaa;
+	}
+
+}
+
+/* Content */
+
+.ck_form_content h3 {
+	margin: 0px 0px 15px;
+	font-size: 24px;
+	padding: 0px;
+}
+
+
+.ck_form_content p {
+	font-size: 14px;
+}
+
+.ck_image {
+	float: left;
+	margin-right: 5px;
+}
+
+/* Form fields */
+
+.ck_errorArea {
+	display: none;
+}
+
+#ck_success_msg {
+	padding: 10px 10px 0px;
+	border: solid 1px #ddd;
+	background: #eee;
+}
+
+.ck_label {
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.ck_form input[type="text"], .ck_form input[type="email"] {
+	font-size: 14px;
+	padding: 10px 8px;
+	width: 100%;
+	border: 1px solid #d6d6d6; /* stroke */
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border-radius: 4px; /* border radius */
+	background-color: #f8f7f7; /* layer fill content */
+	margin-bottom: 5px;
+	height: auto;
+}
+
+.ck_form input[type="text"]:focus, .ck_form input[type="email"]:focus {
+	outline: none;
+	border-color: #aaa;
+}
+
+.ck_checkbox {
+  padding: 10px 0px 10px 20px;
+  display: block;
+  clear: both;
+}
+
+.ck_checkbox input.optIn {
+  margin-left: -20px;
+  margin-top: 0;
+}
+.ck_form .ck_opt_in_prompt {
+  margin-left: 4px;
+}
+.ck_form .ck_opt_in_prompt p {
+  display: inline;
+}
+
+.ck_form .ck_subscribe_button {
+    width: 100%;
+    color: #fff;
+    margin: 10px 0px 0px;
+    padding:  10px 0px;
+    font-size: 18px;
+    background: #ff753b;
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    border-radius: 4px; /* border radius */
+    cursor: pointer;
+    border: none;
+    text-shadow: none;
+  }
+
+
+.ck_form .ck_guarantee {
+	color: #626262;
+	font-size: 12px;
+	text-align: center;
+	padding: 5px 0px;
+	display: block;
+}
+
+.ck_form .ck_powered_by {
+	display: block;
+	color: #aaa;
+}
+
+.ck_form .ck_powered_by:hover {
+	display: block;
+	color: #444;
+}
+
+.ck_converted_content {
+  display: none;
+	padding: 5%;
+	background: #fff;
+}
+
+
+/* v6 */
+
+.ck_form_v6 #ck_success_msg {
+	padding: 0px 10px;
+}
+
+@media all and (max-width: 403px) {
+  .ck_form_v6.ck_modal .ck_close_link {
+    top: 30px;
+  }
+}
+
+@media all and (min-width: 404px) and (max-width: 499px) {
+  .ck_form_v6.ck_modal .ck_close_link {
+    top: 57px;
+  }
+}
+
+
+.ck_form_container.ck_slide_up {
+	position: fixed;
+	bottom: 0px;
+	margin-bottom: 0px;
+	z-index: 500;
+	display: none;
+  max-width: 400px;
+  min-width: 300px;
+}
+
+.ck_form_container.ck_slide_up.visible {
+	display:block;
+}
+
+.ck_form_container.ck_slide_up .ck_form {
+	margin: 0px;
+}
+
+.ck_close_link {
+	position: absolute;
+	top: -5px;
+	right: -5px;
+	width: 30px;
+	height: 30px;
+	background:#fff;
+	color: #777;
+	-webkit-border-radius: 15px;
+	-moz-border-radius: 15px;
+	border-radius: 15px;
+	-webkit-box-shadow: 0px 0px 3px rgba(0,0,0,.2);
+	-moz-box-shadow: 0px 0px 3px rgba(0,0,0,.2);
+	box-shadow: 0px 0px 3px rgba(0,0,0,.2);
+	text-align: center;
+	line-height: 30px;
+	cursor: pointer;
+	display: none;
+}
+
+
+/* v5 overrides */
+.ck_form_container.ck_slide_up.ck_form_v6 {
+  min-width: 0 !important;
+}
+
+/* v6 */
+.ck_slide_up.ck_form_v6 {
+  max-width: 100% !important;
+  width: 360px;
+}
+
+.ck_slide_up.ck_form_v6 .ck_close_link {
+  background: transparent;
+  -webkit-box-shadow: 0 0 0;
+  box-shadow: 0 0 0;
+  top: 25px;
+  transition: all 200ms ease;
+  opacity: 0.5;
+}
+
+.ck_slide_up.ck_form_v6 .ck_close_link:hover {
+  border-color: rgba(0,0,0,.2);
+  opacity: 1;
+  transition: all 200ms ease;
+  transition: all 200ms ease;
+}
+
+.ck_slide_up--lg {
+  max-height: 100vh;
+  overflow: scroll;
+}
+
+@media all and (max-width: 599px) {
+  .ck_slide_up.ck_form_v6 .ck_close_link {
+    right: 5px;
+  }
+
+  .ck_slide_up--lg {
+    width: 100% !important;
+  }
+}
+
+@media all and (min-width: 600px) {
+  .ck_slide_up--lg {
+    width: 700px !important;
+    max-height: 100vh;
+    overflow: scroll;
+  }
+}
+
+@media all and (min-width: 600px) and (max-width: 800px) {
+  .ck_slide_up--lg .ck_close_link {
+    right: 5px !important;
+  }
+}
+
+@media all and (max-width: 600px) {
+  .ck_slide_up.ck_form_v6 .ck_close_link {
+    right: 5px;
+  }
+}
+
+
+.ck_slide_up .ck_form {
+  border: 2px solid #999999;
+  border-bottom: none;
+}
+
+.ck_slide_up .ck_vertical_subscription_form{
+  border-radius: 8px 8px 0px 0px;
+}
+
+.ck_slide_up.ck_form_v6{
+ width: 380px !important;
+}
+
+.ck_slide_up .ck_vertical .ck_form_content{
+ padding: 8px 10% !important;
+ border-bottom: none !important;
+}
+
+.ck_slide_up .ck_close_link {
+  top: 8px !important;
+}
+
+.ck_slide_up .ck_vertical .ck_form_fields{
+ padding: 5% 10% 10% 10%;
+}
+
+.ck_slide_up .ck_form_content h3{
+ color: #ff753b !important;
+ margin: 15px 0;
+}
+
+.ck_slide_up .ck_guarantee { display: none !important; }
+
+</style>
+</div><script async="" src="./How Rails sessions work - Justin Weiss_files/397708" id="_ck_397708"></script>
+
+        
+        
+          <h2>Comments</h2>
+          <div id="disqus_thread"><iframe id="dsq-app6476" name="dsq-app6476" allowtransparency="true" frameborder="0" scrolling="no" tabindex="0" title="Disqus" width="100%" src="./How Rails sessions work - Justin Weiss_files/saved_resource.html" style="width: 1px !important; min-width: 100% !important; border: none !important; overflow: hidden !important; height: 7786px !important;" horizontalscrolling="no" verticalscrolling="no"></iframe></div>
+          <script>
+           var disqus_config = function () {
+             this.page.url = 'http://www.justinweiss.com/articles/how-rails-sessions-work/';
+             this.page.identifier = 'http://www.justinweiss.com/articles/how-rails-sessions-work/';
+           };
+           (function() { // DON'T EDIT BELOW THIS LINE
+             var d = document, s = d.createElement('script');
+             s.src = 'https://justinweissblog.disqus.com/embed.js';
+             s.setAttribute('data-timestamp', +new Date());
+             (d.head || d.body).appendChild(s);
+           })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        
+        
+      </main>
+      
+        <aside>
+          <section>
+            <p class="tc"><img class="center-block img-responsive" src="./How Rails sessions work - Justin Weiss_files/me-square.jpg" width="256" height="256" alt="Hey, it&#39;s me!" %}<="" p="">
+            </p><p>I'm Justin Weiss, a software engineer at <a href="https://www.aha.io/">Aha!</a> and the author of several Ruby gems like <a href="https://github.com/justinweiss/robut">robut</a> and <a href="https://github.com/justinweiss/resque_unit">resque_unit</a>. I'd love to hear from you, so you should <a href="mailto:justin@justinweiss.com?subject=Hey%20I%20just%20read%20your%20site!">send me an email</a> or <a href="https://twitter.com/justinweiss">follow me on twitter.</a></p>
+          </section>
+      
+          <section>
+            <p><a href="https://www.justinweiss.com/practicing-rails"><img src="./How Rails sessions work - Justin Weiss_files/practicing-rails-small.jpg" alt="Practicing Rails" width="250" height="261" class="center-block img-responsive"></a></p>
+            <p>Cut through the noise and complexity and <em>finally</em> become the Rails developer you know you should be.</p>
+            <p><a href="https://www.justinweiss.com/practicing-rails" class="btn btn-warning">Get your free chapter of <em>Practicing Rails</em></a></p>
+          </section>
+      
+          <section>
+            <h3>Recent Posts</h3>
+            <ul>
+              
+                <li><a href="https://www.justinweiss.com/articles/how-do-you-catch-back-up/">When You've Taken a Learning Break, How Do You Catch Back Up?</a></li>
+              
+                <li><a href="https://www.justinweiss.com/articles/how-do-you-do-a-rails-deep-dive/">How Do You Do a Rails Deep Dive?</a></li>
+              
+                <li><a href="https://www.justinweiss.com/articles/take-a-rails-deep-dive/">When to Take a Rails Deep Dive</a></li>
+              
+                <li><a href="https://www.justinweiss.com/articles/a-decorator-vs-a-subclass/">A Decorator vs. a Subclass</a></li>
+              
+                <li><a href="https://www.justinweiss.com/articles/the-lesser-known-features-in-rails-5-dot-1/">The Lesser-Known Features in Rails 5.1</a></li>
+              
+            </ul>
+          </section>
+      
+        </aside>
+      
+    </div>
+    <footer class="text-muted text-center">
+      Copyright © 2014–2019 Guided Code, LLC. All rights reserved.
+    </footer>
+
+    <script type="text/javascript" src="./How Rails sessions work - Justin Weiss_files/events.js"></script>
+<script src="./How Rails sessions work - Justin Weiss_files/CKJS4(1).js"></script>
+
+
+
+
+  
+
+<iframe style="display: none;" src="./How Rails sessions work - Justin Weiss_files/saved_resource(1).html"></iframe><div class="ck_form_container ck_slide_up ck_form_v6" data-ck-version="7">
+	
+<div class="ck_form ck_vertical_subscription_form width400 ck_vertical">
+  <div class="ck_form_content">
+    <h3 class="ck_form_title">Don’t let overwhelm stop you</h3>
+    <div class="ck_description">
+      <span class="ck_image">
+        
+      </span>
+      <p>Struggled through the same guides three times and <em>still</em> can't build your own Rails app?</p><p><strong>Sign up for my free 7-day Rails course</strong>, where you’ll specific steps for  starting Rails apps of your own — without giving up, and without being overwhelmed.</p>
+    </div>
+  </div>
+
+  <div class="ck_form_fields">
+    <div id="ck_success_msg" style="display:none;">
+      <p>Success! Now check your email to confirm your subscription.</p>
+    </div>
+
+    <!--  Form starts here  -->
+    <form id="ck_subscribe_form" class="ck_subscribe_form" action="https://forms.convertkit.com/landing_pages/397708/subscribe" data-remote="true">
+      <input type="hidden" value="{&quot;form_style&quot;:&quot;full&quot;,&quot;converted_behavior&quot;:&quot;hide&quot;,&quot;days_no_show&quot;:&quot;1&quot;,&quot;delay_seconds&quot;:&quot;2&quot;,&quot;display_devices&quot;:&quot;all&quot;,&quot;display_position&quot;:&quot;br&quot;,&quot;embed_style&quot;:&quot;slideup&quot;,&quot;embed_trigger&quot;:&quot;scroll_percentage&quot;,&quot;scroll_percentage&quot;:&quot;20&quot;}" id="ck_form_options">
+      <input type="hidden" name="id" value="397708" id="landing_page_id">
+      <input type="hidden" name="ck_form_recaptcha" value="" id="ck_form_recaptcha">
+      <div class="ck_errorArea">
+        <div id="ck_error_msg" style="display:none">
+          <p>There was an error submitting your subscription. Please try again.</p>
+        </div>
+      </div>
+      <div class="ck_control_group ck_first_name_field_group">
+        <label class="ck_label" for="ck_firstNameField">First Name</label>
+        <input type="text" name="first_name" class="ck_first_name" id="ck_firstNameField">
+      </div>
+      <div class="ck_control_group ck_email_field_group">
+        <label class="ck_label" for="ck_emailField">Email Address</label>
+        <input type="email" name="email" class="ck_email_address" id="ck_emailField" required="">
+      </div>
+      <div class="ck_control_group ck_captcha2_h_field_group ck-captcha2-h" style="position: absolute !important;left: -999em !important;">
+        <label class="ck_label" for="ck_captcha2_h">We use this field to detect spam bots. If you fill this in, you will be marked as a spammer.</label>
+        <input type="text" name="captcha2_h" class="ck-captcha2-h" id="ck_captcha2_h">
+      </div>
+
+
+      <button class="subscribe_button ck_subscribe_button btn fields" id="ck_subscribe_button">
+        Send me lesson #1
+      </button>
+      <span class="ck_guarantee">
+        We won't send you spam. Unsubscribe at any time.
+          <a class="ck_powered_by" href="https://convertkit.com/?utm_source=dynamic&amp;utm_medium=referral&amp;utm_campaign=poweredby&amp;utm_content=form">Powered by ConvertKit</a>
+      </span>
+    <input type="hidden" name="ck_field_32793_last_optin_url" value="https://www.justinweiss.com/articles/how-rails-sessions-work/"></form>
+  </div>
+
+</div>
+
+<div class="ck_close_link">✕</div></div></body></html>

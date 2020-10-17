@@ -1,0 +1,23 @@
+Active Record Merge
+
+After years of working with ActiveRecord and watching it change so much, it is exciting to find new features you didn't know about. The one I discovered this week is ActiveRecord#merge. It is one of the most underused methods in ActiveRecord, due in part, to the name. It isn't necessarily clear what they mean by "merge" but it's simply a way of using a named scope on a joined model.
+
+Say we have two models that are associated and one of them has a scope:
+
+class Author < ActiveRecord::Base
+  has_many :books
+end
+class Book < ActiveRecord::Base
+  belongs_to :author
+
+  scope :available, ->{ where(available: true) }
+end
+Let's say we want to join the tables to find all Authors who have books that are available. Without ActiveRecord#merge, we have to make this query:
+
+Author.joins(:books).where("books.available = ?", true)
+SELECT "authors".* FROM "authors" INNER JOIN "books" ON "books"."author_id" = "authors"."id" WHERE "books"."available" = 't'
+But with ActiveRecord#merge, this becomes a whole lot cleaner and we don't duplicate the available scope:
+
+Author.joins(:books).merge(Book.available)
+SELECT "authors".* FROM "authors" INNER JOIN "books" ON "books"."author_id" = "authors"."id" WHERE "books"."available" = 't'
+As you can see, the resulting SQL queries are exactly the same. ActiveRecord#merge is a great way to reduce the duplication in your code to continue relying on the named scopes you define in your models. I really want to see more people using this so please share this around!

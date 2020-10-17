@@ -1,0 +1,66 @@
+Rails Params Hash
+"params is parameter that query from a request inside the rails application"
+
+inside the config/router.rb :
+Rails.application.router.draw do
+  get "/blog", to: "blog#index"
+  get "/blog/:id", to: "blog#show"
+  post "/blog", to: "blog#create"
+end
+
+inside the app/controllers/blog_controller.rb:
+class BlogController < ApplicationController do
+  def index
+    @test = params[:test]
+  end
+
+  def show
+    @id = params[:id]
+    @test = params[:test]
+  end
+
+  def create
+    redirect_to action: :index
+  end
+end
+
+inside the app/views/blog/index.html.erb:
+<h1>Blog!</h1>
+<%- @test -%>
+
+<%- form_tag blog_path do -%>
+  <div>
+    <%- text_field_tag :title -%>
+  </div>
+
+  <div>
+    <%- text_field_tag :body -%>
+  </div>
+  <%- submit_tag "Create Post" -%>
+<%- end -%>
+
+- Get request parameter
+example:
+localhost:3000/blog?test=1
+"after ? is the query"
+params[:test] = 1
+
+localhost:3000/blog?test=2
+params[:test] = 2
+
+localhost:3000/blog/3
+params[:id] = 3
+
+localhost:3000/blog/3?test=4
+params[:id] = 3
+params[:test] = 4
+
+- Post request parameter
+localhost:3000/blog/create
+
+inside the form :
+  :title = Post_title
+  :body = Blog_Post
+
+params[:title] = Post_title
+params[:body] = Blog_Post

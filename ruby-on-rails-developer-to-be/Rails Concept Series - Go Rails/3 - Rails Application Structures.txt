@@ -1,0 +1,56 @@
+Rails Application Structures
+
+Gemfile: "Contain all the dependencies"
+Rakefile: "Going to load your application, and run task from command line like rake db=migrate"
+Readme.md: "For readme of your app"
+
+//Configuration
+config.ru: "Call rack server to run rails app""
+Rack: "Rack provides a minimal, modular, and adaptable interface for developing web applications in Ruby"
+config/boot.rb: "Boot application and have all the dependencies"
+config/application.rb: "Allow to config global variable"
+config/database.yml: "Database config file, setting adapter or database type(mysql/pg/sqlite3) for every group"
+config/secrets.yml: "Store secret key (API key, Email server password)"
+config/environments/development.rb: "config for development group, without cache"
+config/environments/production.rb: "config for production group, usually with cache so it will be faster, compress the js"
+config/initializers/: "To initialize aspect of the rails, example stores cookies json"
+config/locales/: "Default Internationalization(I18nt) en, id, fr"
+
+//Bin
+bin/: "All of the executables is inside this folder, and you can add the executable inside this folder"
+
+//App
+app/: "The source code of the rails"
+app/assets: "Contain all of images, javascripts, stylesheets and images"
+app/controllers: "Contain all of the business logic"
+app/controllers/concern: "if you have something shared between controllers"
+app/helpers: "For the view, example: you can take someone First name and last name and make method inside helpers to add the together"
+app/mailers: "for sending email, email template"
+app/models: "Contain database tables"
+app/models: "if you have something shared between models"
+app/views/layouts: "for general layout of webpage"
+
+//db
+db/seed.rb: "Can Add default data for the database"
+db/migrate: "Migration will track the changes of database"
+
+//lib
+"Contain extra tool for rails"
+
+//log
+"Store log for the rails app"
+
+//public
+"Contain static file like 400.html, 500.html, 502.html"
+
+//test
+"For testing"
+test/helper: "Help to make the testing"
+
+//tmp
+"For temporary files"
+
+//vendor
+"For third party app, like bootstrap"
+
+

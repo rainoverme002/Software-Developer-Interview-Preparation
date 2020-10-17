@@ -1,0 +1,6 @@
+Ruby Version Manager (rvm or rbenv)
+"Use to switch between many ruby versions"
+
+rbenv: lightweight
+rvm: full version
+bundler: use to modify the Gemfile
