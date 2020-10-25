@@ -6,13 +6,14 @@ This is my repository for your next interview preparation
 
 ### Prerequisites
 
-What things you need to use it
+Programming Languages inside
 
 ```
 1. python
 2. javascript
 3. ruby
 4. C++
+5. julia
 ```
 
 ## Contributing
@@ -21,7 +22,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 ## Authors
 
-[rainoverme002](https://github.com/rainoverme002)
+[rainoverme002](https://github.com/whitequbits)
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
