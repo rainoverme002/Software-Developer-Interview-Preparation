@@ -22,7 +22,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 ## Authors
 
-[rainoverme002](https://github.com/whitequbits)
+[whitequbits](https://github.com/whitequbits)
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
