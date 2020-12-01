@@ -4,9 +4,6 @@
 
 using namespace std;
 
-using std::vector;
-using std::deque;
-
 /* [function] visualize_window
     input: 
       - deque int window
