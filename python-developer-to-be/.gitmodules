@@ -1,9 +1,0 @@
-[submodule "Udemy-Basic-Python"]
-	path = Udemy-Basic-Python
-	url = https://github.com/rainoverme002/Udemy-Basic-Python.git
-[submodule "Dicoding-Basic-Python"]
-	path = Dicoding-Basic-Python
-	url = https://github.com/rainoverme002/Dicoding-Basic-Python.git
-[submodule "machine-learning-deployment"]
-	path = machine-learning-deployment
-	url = https://github.com/abhinavsagar/machine-learning-deployment.git
