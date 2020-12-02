@@ -4,7 +4,7 @@
 
 using namespace std;
 
-/* [function] visualize_window
+/* [function] VisualizeWindow
     input: 
       - deque int window
     output:
@@ -13,14 +13,14 @@ using namespace std;
       - Output the number inside the window
 */
 
-void visualize_window(deque<int>& window){
+void VisualizeWindow(deque<int>& window){
   // window visualisation
   for (int i = 0; i < window.size(); ++i)
     cout << window[i] << ", ";
   cout << endl;
 }
 
-/* [function] find_max_sliding_window
+/* [function] FindMaxSlidingWindow
     input: 
       - vector int input
       - int window_size
@@ -35,7 +35,7 @@ void visualize_window(deque<int>& window){
       windows_size = 3
 */
 
-vector<int> find_max_sliding_window(vector<int>& input, int window_size) {
+vector<int> FindMaxSlidingWindow(vector<int>& input, int window_size) {
   vector<int> result;
 
   // **Important** window is used to save the index of number in current window
@@ -51,7 +51,7 @@ vector<int> find_max_sliding_window(vector<int>& input, int window_size) {
     window.push_back(i);
 
     // visualization
-    visualize_window(window);
+    VisualizeWindow(window);
   };
 
   // push the maximum of the first window to result
@@ -77,7 +77,7 @@ vector<int> find_max_sliding_window(vector<int>& input, int window_size) {
     result.push_back(input[window.front()]);
 
     // visualization
-    visualize_window(window);
+    VisualizeWindow(window);
   }
 
   return result;
@@ -96,7 +96,7 @@ int main(int argc, const char *argv[])
     cout << x[i] << ", ";
   cout << endl;
 
-  auto res1 = find_max_sliding_window(x, 3);
+  auto res1 = FindMaxSlidingWindow(x, 3);
 
   //printing the first result
   cout << "Max = ";
@@ -113,7 +113,7 @@ int main(int argc, const char *argv[])
     cout << x[i] << ", ";
   cout << endl;
 
-  auto res2 = find_max_sliding_window(x, 3);
+  auto res2 = FindMaxSlidingWindow(x, 3);
 
   //printing the second result
   cout << "Max = ";
