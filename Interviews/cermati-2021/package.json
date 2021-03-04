@@ -1,0 +1,17 @@
+{
+  "name": "scrapper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "solution.js",
+  "scripts": {
+    "start": "node -r dotenv/config solution.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.7.2",
+    "cheerio": "^1.0.0-rc.5",
+    "dotenv": "^8.2.0",
+    "superagent": "^6.1.0"
+  }
+}
